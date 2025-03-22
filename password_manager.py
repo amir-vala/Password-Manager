@@ -7,179 +7,145 @@ from Crypto.Util.Padding import pad, unpad
 import os
 import base64
 
-# --------------------------- Global Variables ---------------------------
-
-# Maximum attempts for password entry
 i = 5
-
-# Stores hashed password for authentication
-passhash = b''
-
-# Application state (True if authenticated)
+passhash = b'$2b$12$2TSbRdljVhMXT9mLmkwt5OnfaGFVDYwkRlcSlar4TxWLFjW1WX5cm'
 appst = False
-
-# Lists to store encrypted passwords and keys
 encryptedPass = []
 keys=[]
 
-# --------------------------- Functions ---------------------------
-
 def searckkey(username):
-    """
-    Retrieve the encryption key associated with a username.
-    """
     try:
         with open("key.json", "r") as file:
             data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError): 
-        print("[ERROR] Could not read key file.")
+        print("\U000026A0 ERROR: Failed to read key file!")
         return None
     
     if username in data:
-        ans = data[username]["KEY"]  # Retrieve stored key
-        ans = base64.b64decode(ans)  # Decode Base64 to get original bytes
+        ans = base64.b64decode(data[username]["KEY"])
         return ans
     else: 
-        print("[ERROR] Key not found!")
+        print("\U0001F50D Username not found! ❌")
         return None
 
 def searchpass(username):
-    """
-    Retrieve the encrypted password associated with a username.
-    """
     try: 
         with open("passwords.json", "r") as file:
             data = json.load(file)
     except (FileNotFoundError, json.JSONDecodeError): 
-        print("[ERROR] Could not read password file.")
+        print("\U000026A0 ERROR: Failed to read password file!")
         return None
     
     if username in data:
-        ans = data[username]["password"]  # Retrieve stored password
-        ans = base64.b64decode(ans)  # Decode Base64 to get original bytes
-        return ans  # Return decrypted password bytes
+        ans = base64.b64decode(data[username]["password"])
+        return ans
     else: 
-        print("[ERROR] Password not found!")
+        print("\U0001F50D Password not found for this username! ❌")
         return None
 
 def savekey(usrnm, key):
-    """
-    Save encryption keys to a JSON file.
-    """
     try:
         with open("key.json", "r") as json_file:
             data = json.load(json_file)
     except (FileNotFoundError, json.JSONDecodeError):
-        print("[WARNING] Key file not found, creating a new one.")
+        print("\U0001F4A3 No key storage found, creating a new one...")
         data = {}
     
     for i in range(len(usrnm)):
-        data[usrnm[i]] = {
-            "KEY": base64.b64encode(key[i]).decode(),
-        }
+        data[usrnm[i]] = {"KEY": base64.b64encode(key[i]).decode()}
     
     with open("key.json", "w") as json_file:
         json.dump(data, json_file, indent=4)
 
 def randpass(usr, leng):
-    """
-    Generate a random password, excluding specified characters.
-    """
     allchar = list(set(string.ascii_letters + string.digits + "!@#$%^&*()-_=+/~`") - set(usr))
     random_string = ''.join(random.choices(allchar, k=leng))
     return random_string
 
 def encrypt(message, key, iv):
-    """
-    Encrypt a message using AES encryption in CBC mode.
-    """
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    message_padded = pad(message.encode(), AES.block_size)  # Padding message
+    message_padded = pad(message.encode(), AES.block_size)
     encrypted = cipher.encrypt(message_padded)
     return base64.b64encode(iv + encrypted).decode()
 
 def decrypt(encrypted_message, key):
-    """
-    Decrypt an AES-encrypted message.
-    """
-    try:
-        raw_data = base64.b64decode(encrypted_message)
-        iv = raw_data[:16]
-        encrypted_data = raw_data[16:]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        decrypted = unpad(cipher.decrypt(encrypted_data), AES.block_size)
-        return decrypted.decode('utf-8') 
-    except Exception:
-        print("[ERROR] Decryption failed!")
-        return None
+    raw_data = base64.b64decode(encrypted_message)
+    iv = raw_data[:16]
+    encrypted_data = raw_data[16:]
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    decrypted = unpad(cipher.decrypt(encrypted_data), AES.block_size)
+    return decrypted.decode('utf-8')
 
 def savepass(usrnm, passd):
-    """
-    Save passwords in an encrypted format to a JSON file.
-    """
     try:
         with open("passwords.json", "r") as json_file:
             data = json.load(json_file)
     except (FileNotFoundError, json.JSONDecodeError):
-        print("[WARNING] Password file not found, creating a new one.")
+        print("\U0001F4A3 No password storage found, creating a new one...")
         data = {}
     
     for i in range(len(passd)):
-        data[usrnm[i]] = {
-            "password": base64.b64encode(passd[i].encode()).decode(),
-        }
+        data[usrnm[i]] = {"password": base64.b64encode(passd[i].encode()).decode(), "notes": "Some notes about this password"}
     
     with open("passwords.json", "w") as json_file:
         json.dump(data, json_file, indent=4)
 
 def main(appstd):
-    """
-    Main function to manage the password manager menu.
-    """
-    if appstd == True:
+    if appstd:
         while True:
-            print("\n=================== PASSWORD MANAGER ===================")
-            print("1 - Generate New Password")
-            print("2 - Retrieve Existing Password")
-            print("0 - Exit")
-            print("======================================================")
+            print("\n\U0001F4A1 Welcome to Password Manager \U0001F511")
+            print("\n🔹 1 - Generate a new password")
+            print("🔹 2 - Retrieve a password")
+            print("🔹 0 - Exit")
             
-            try:
-                x = int(input("Enter your choice: "))
-            except ValueError:
-                print("[ERROR] Invalid input! Please enter a valid option.")
-                continue
-            
+            x = int(input("\nYour choice: "))
             if x == 1:
-                try:
-                    x1 = int(input('Password length: '))
-                    x2 = input('Characters to exclude: ')
-                    x3 = int(input('Number of passwords to generate: '))
-                    passwords = [randpass(x2, x1) for _ in range(x3)]
-                    print("\nGenerated Passwords:")
-                    for p in passwords:
-                        print("-", p)
-                    
-                    print('\n1 - Save | 2 - Cancel')
-                    choice = int(input())
-                    if choice == 1:
-                        username = [input(f'Enter username for password {i+1}: ') for i in range(x3)]
-                        for i in range(x3):
-                            KEY = os.urandom(32) 
-                            IV = os.urandom(16)
-                            keys.append(KEY)
-                            encryptedPass.append(encrypt(passwords[i], KEY, IV))
-                        savepass(username, encryptedPass)
-                        savekey(username, keys)
-                except ValueError:
-                    print("[ERROR] Invalid input!")
+                x1 = int(input('\n🔢 How many characters do you want? '))
+                x2 = input('\n❌ Which characters do you want to exclude? ')
+                x3 = int(input('\n🔄 How many passwords do you need? '))
+                passwords = [randpass(x2, x1) for _ in range(x3)]
+                
+                print('\n🎉 Generated Passwords:')
+                for p in passwords:
+                    print(f'👉 {p}')
+                
+                if int(input('\n✅ Do you want to save these passwords? (1-Yes, 2-No) ')) == 1:
+                    username = [input(f'🆔 Username for password {i+1}: ') for i in range(len(passwords))]
+                    keys = [os.urandom(32) for _ in range(len(passwords))]
+                    encryptedPass = [encrypt(passwords[i], keys[i], os.urandom(16)) for i in range(len(passwords))]
+                    savepass(username, encryptedPass)
+                    savekey(username, keys)
+                    print('\n✔ Passwords saved successfully!')
             elif x == 2:
-                usrnm = input('Enter your username: ')
+                usrnm = input('\n🆔 Enter your username: ')
                 enpass = searchpass(usrnm)
                 enkey = searckkey(usrnm)
                 if enpass and enkey:
                     decrypted_password = decrypt(enpass, enkey)
-                    if decrypted_password:
-                        print(f"Password for {usrnm}: {decrypted_password}")
+                    print(f"\n🔓 Password for {usrnm}: {decrypted_password}")
             elif x == 0:
+                print("👋 Exiting... Goodbye!")
                 break
+
+while i > 0:
+    if os.path.exists("apppass.json"):
+        password = input("\n🔑 Enter your password: ")
+        with open("apppass.json", "r") as file:
+            data = json.load(file)
+        
+        passhash = base64.b64decode(data["user1"]["password"].encode())
+        if bcrypt.checkpw(password.encode(), passhash):
+            print("\n✅ Access Granted!")
+            appst = True
+            main(appst)
+            break
+        else:
+            i -= 1
+            print(f"\n❌ Wrong password! {i} tries left.")
+    else:
+        print("\n🎉 Welcome to Password Manager v1.0")
+        password = input("Set a new password: ").encode()
+        final_hash = bcrypt.hashpw(password, bcrypt.gensalt())
+        with open("apppass.json", "w") as file:
+            json.dump({"user1": {"password": base64.b64encode(final_hash).decode()}}, file, indent=4)
+        print("\n🔒 Password set successfully!")
