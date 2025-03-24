@@ -8,7 +8,7 @@ import os
 import base64
 
 i = 5
-passhash = b'$2b$12$2TSbRdljVhMXT9mLmkwt5OnfaGFVDYwkRlcSlar4TxWLFjW1WX5cm'
+passhash = b''
 appst = False
 encryptedPass = []
 keys=[]
